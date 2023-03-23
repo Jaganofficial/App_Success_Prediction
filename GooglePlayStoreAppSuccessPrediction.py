@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 
-apps_data = pd.read_csv("3000Spartans_AppData.csv")  # App dataset extracted from playstore
+apps_data = pd.read_csv("10000Spartans.csv")  # App dataset extracted from playstore
 
 # PreProcessing
 # Dropping the columns with null values:
@@ -76,7 +76,6 @@ print("For an 80-20 training/test split, we need about {} apps for testing\n".fo
 
 # condition to filter rows
 condition = final_app_data['Installs'] > 100000
-print(condition)
 # update the 'name' column for the rows that meet the condition
 final_app_data['Installs'] = np.where(condition, 1, 0)
 
@@ -91,9 +90,9 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 # Calculate the mean squared error
 score = accuracy_score(y_test, y_pred)
-print(score)
+print("RandomForestClassifier - ",score)
 
 popularity_classifier = DecisionTreeClassifier(max_leaf_nodes=29, random_state=0)
 popularity_classifier.fit(X_train, y_train)
 y_pred = popularity_classifier.predict(X_test)
-print(accuracy_score(y_true = y_test, y_pred = y_pred))
+print("DecisionTreeClassifier - ",accuracy_score(y_true = y_test, y_pred = y_pred))
