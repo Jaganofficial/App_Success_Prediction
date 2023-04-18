@@ -46,7 +46,7 @@ data['HaveAds'] = data['HaveAds'].astype(bool)
 
 # Convert 'GenreId' column to categorical data type and then encode it
 le = LabelEncoder()
-data['GenreId'] = le.fit_transform(data['GenreId'].astype(str))
+data['GenreId'] = le.fit_transform(data['GenreId'])
 #data['GenreId'] = data['GenreId'].astype('category')
 
 # Create 'HasScreenshots' and 'HasVideo' columns
@@ -55,6 +55,9 @@ data['HasVideo'] = data['Video'] > 0
 
 # Drop 'Screenshots' and 'Video' columns
 #data = data.drop(['Screenshots', 'Video'], axis=1)
+# Apply dataset scaling
+scaler = StandardScaler()
+data = pd.DataFrame(scaler.fit_transform(data), columns=data.columns)
 
 # Split the data into features and target variable
 X = data.drop('Installs', axis=1)
@@ -63,21 +66,17 @@ y = data['Installs']
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Scale the features using StandardScaler
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
-
 imputer = SimpleImputer(strategy='mean')
 X_train = imputer.fit_transform(X_train)
 X_test = imputer.transform(X_test)
+
 
 # Fit a linear regression model
 # model = LinearRegression()
 
 # Fit a RandomForest model
 from sklearn.ensemble import RandomForestRegressor
-model = RandomForestRegressor()
+model = RandomForestRegressor(random_state =0, n_estimators=500, max_depth=10)
 
 model.fit(X_train, y_train)
 

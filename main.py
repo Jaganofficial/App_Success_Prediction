@@ -1,5 +1,5 @@
 import ast
-from datetime import time
+from datetime import time, datetime
 
 import numpy as np
 import pandas as pd
@@ -23,18 +23,26 @@ from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn import linear_model
 
+def convert_date(date_str):
+    try:
+        date_obj = datetime.strptime(date_str, '%m/%d/%Y')
+    except:
+        date_obj = None
+    if date_obj is not None:
+        timestamp = int(date_obj.timestamp())
+    else:
+        timestamp = None
+    return timestamp
 
-def rmse_score(y1, y2):
-    return np.sqrt(np.power(y1 - y2, 2).mean())
 
-
-#df = pd.read_csv("10000Spartans.csv")#, encoding='unicode_escape')
-df = pd.read_csv("3000Spartans_AppData.csv")
+df = pd.read_csv("3000Spartans_AppData.csv")#, encoding='unicode_escape')
+# df = pd.read_csv("3000Spartans_AppData.csv")
 print(df.columns)
 # HeatMap
 # df = df.drop(["Id", "Title", "Description", "GenreId", "ReleasedOn"], axis=1)
 # sns.heatmap(df.corr(), cmap='YlGnBu', annot=True, linewidths=0.2)
 # plt.show()
+# df =df.drop(['Sale'],axis=1)
 # sns.heatmap(df.corr('spearman'), cmap='YlOrBr', annot=True, linewidths=0.2)
 # plt.show()
 
@@ -57,16 +65,16 @@ print(df.columns)
 
 # installs vs free
 # df['log_Installs'] = np.log1p(df['Installs'])
-# sns.catplot(x='Free', y='Installs', data=df)
+# sns.catplot(x='Free', y='log_Installs', data=df)
 # plt.title('Installs for Apps that are free')
 # plt.show()
 
 # words in title and description
-# token_title = ' '.join(df['Description'].values) #create split to title by sprace to extract the text.
+# token_title = ' '.join(df['Description'].astype(str).values) #create split to title by sprace to extract the text.
 # #bg color set to white for good contrast, by default bg color is darker
 # wordcloud = WordCloud(max_font_size=None, background_color='black', width=1200, height=1000).generate(BeautifulSoup(token_title, "html.parser").text)
 # plt.imshow(wordcloud)
-# plt.title('Top words from app\'s Descriptions')
+# plt.title('Top words from app\'s Description')
 # plt.axis("off") # we don't need axes for this
 # plt.show()
 
@@ -111,21 +119,43 @@ print(df.columns)
 
 # Model Prediction
 # selecting the numeric column
-# numerics = ['int16', 'int32', 'int64', 'float16', 'float32',
-#             'float64']  # so that easy for us to perform  train and test
-# df_train = df.select_dtypes(include=numerics)
-# df_train = df_train.fillna(df_train.median())
-#
-# print(df_train.columns)
-# data = df_train.copy()
-# sns.heatmap(data.corr(), annot=True)
-# plt.show()
+df['TitleLength'] = df['Title'].astype(str).apply(len)
+df['DescriptionLength'] = df['Description'].astype(str).apply(len)
+df['ReleasedTimestamp'] = df['ReleasedOn'].astype(str).apply(convert_date)
+df['Free'] = df['Free'].astype(bool)
+df['Sale'] = df['Sale'].astype(bool)
+df['In_app_purchase'] = df['In_app_purchase'].astype(bool)
+df['AdSupported'] = df['AdSupported'].astype(bool)
+df['HaveAds'] = df['HaveAds'].astype(bool)
 
-X = df[['Rating', 'Review', 'Price',
-        'Free', 'Sale', 'In_app_purchase', 'Screenshots', 'Video',
-        'AdSupported', 'HaveAds', 'CommentsSentimentalScore',
-        'CommentReviewValue']]
-y = df['Installs']
+le = LabelEncoder()
+df['GenreId'] = le.fit_transform(df['GenreId'])
+#data['GenreId'] = data['GenreId'].astype('category')
+
+# Create 'HasScreenshots' and 'HasVideo' columns
+df['HasScreenshots'] = df['Screenshots'] > 0
+df['HasVideo'] = df['Video'] > 0
+
+# Drop 'Screenshots' and 'Video' columns
+#data = data.drop(['Screenshots', 'Video'], axis=1)
+# Apply dataset scaling
+
+numerics = ['int16', 'int32', 'int64', 'float16', 'float32',
+            'float64']  # so that easy for us to perform  train and test
+df_train = df.select_dtypes(include=numerics)
+df_train = df_train.fillna(df_train.median())
+
+print(df_train.columns)
+data = df_train.copy()
+sns.heatmap(data.corr(), annot=True)
+plt.show()
+
+# X = df[['Rating', 'Review', 'Price',
+#         'Free', 'Sale', 'In_app_purchase', 'Screenshots', 'Video',
+#         'AdSupported', 'HaveAds', 'CommentsSentimentalScore',
+#         'CommentReviewValue']]
+X = df_train.drop(['Installs'],axis=1)
+y = df_train['Installs']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=1)
 
@@ -136,7 +166,7 @@ y_hat = LR_model.predict(X_test)
 print("Linear Regression - R Square value: ", r2_score(y_test, y_hat))
 
 # Gradient Boosting Regressor
-gbr = GradientBoostingRegressor(n_estimators=500, learning_rate=0.001, max_depth=4, min_samples_split= 2)
+gbr = GradientBoostingRegressor(random_state =0, n_estimators=500, max_depth=100)
 gbr.fit(X_train, y_train)
 y_hat = gbr.predict(X_test)
 print("GradientBoostingRegressor- Test score: ", r2_score(y_test, y_hat))
@@ -145,7 +175,7 @@ print("GradientBoostingRegressor- Test score: ", r2_score(y_test, y_hat))
 import sklearn.metrics as metrics
 from sklearn.ensemble import RandomForestRegressor
 
-RF_model = RandomForestRegressor()
+RF_model = RandomForestRegressor(random_state =0, n_estimators=500, max_depth=100)
 RF_model.fit(X_train, y_train)
 y_hat = RF_model.predict(X_test)
-print("Random forest- R-Square value:", metrics.r2_score(y_test, y_hat))
+print("Random forest- R-Square value:", r2_score(y_test, y_hat))
